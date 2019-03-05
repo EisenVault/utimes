@@ -57,7 +57,7 @@ function pathBuffer(path) {
 
 var Utimes = {};
 
-Utimes.utimes = function(path, btime, mtime, atime, callback) {
+Utimes.utimes = function (path, btime, mtime, atime, params = {}, callback) {
   assertPath('path', path);
   assertTime('btime', btime);
   assertTime('mtime', mtime);
@@ -82,18 +82,18 @@ Utimes.utimes = function(path, btime, mtime, atime, callback) {
   if (flags === 0) return callback();
   if (Node.process.platform === 'darwin' || Node.process.platform === 'win32') {
     binding.utimes(pathBuffer(path), flags, btime, mtime, atime,
-      function(result) {
+      function (result) {
         if (result !== 0) {
           var error = new Error('(' + result + '), utimes(' + path + ')');
           return callback(error);
         }
-        callback();
+        callback(null, params);
       }
     );
   } else if (flags === 1) {
     // No need to set mtime or atime.
     // Linux does not support btime.
-    callback();
+    callback(null, params);
   } else if (flags & 2) {
     // We must set mtime.
     // If atime is undefined we make it the same as mtime rather than 0.
@@ -102,7 +102,7 @@ Utimes.utimes = function(path, btime, mtime, atime, callback) {
   } else {
     // We must set atime without changing mtime.
     Node.fs.stat(path,
-      function(error, stats) {
+      function (error, stats) {
         if (error) return callback(error);
         mtime = stats.mtime.getTime();
         Node.fs.utimes(path, atime / 1000, mtime / 1000, callback);
